@@ -1,16 +1,10 @@
 import { useState } from "react";
 import { useCreateDriftAssistSecret } from "react-query/driftAssistQueries";
 
-import { InfoCircleOutlined, LockOutlined } from "@ant-design/icons";
-import { Flex, Form, Radio, Space, Tooltip, message, Select } from "antd";
-import { validateTagPair } from "helpers";
-import {
-  Tag,
-} from "interfaces";
+import { InfoCircleOutlined } from "@ant-design/icons";
+import { Flex, Form, Tooltip, message, Select } from "antd";
 
-import { InternalFilledIcon } from "assets";
-
-import { Drawer, IconViewer, Input, Text } from "components";
+import { Drawer, Input, Text } from "components";
 
 import { Colors, Metrics } from "themes";
 
@@ -30,11 +24,10 @@ const AWS_REGIONS = [
 
 interface DriftAssistSignInFormFields {
   name: string;
-  aws_access_key: string;
-  aws_secret_key: string;
-  aws_region: string;
-  access: string;
-  tags?: string;
+  cloud_provider: string;
+  access_key: string;
+  secret_access_key: string;
+  region: string;
 }
 
 interface DriftAssistSignInDrawerProps {
@@ -63,10 +56,6 @@ const DriftAssistSignInDrawer: React.FC<DriftAssistSignInDrawerProps> = ({
 
   const createDriftAssistSecretMutation = useCreateDriftAssistSecret();
 
-  const access = Form.useWatch("access", {
-    form: driftAssistForm,
-    preserve: true,
-  });
 
   const [messageApi, contextHolder] = message.useMessage();
 
@@ -82,30 +71,17 @@ const DriftAssistSignInDrawer: React.FC<DriftAssistSignInDrawerProps> = ({
       setIsLoading(true);
       await driftAssistForm.validateFields();
 
-      const tags: Tag[] = driftAssistForm
-        ?.getFieldValue("tags")
-        ?.trim()
-        ?.split(" ")
-        ?.map((tag) => {
-          const ta = tag?.split(":");
-          return {
-            key: ta[0],
-            value: ta[1],
-          };
-        });
-
       if (type === "add") {
         const req = {
           name: driftAssistForm.getFieldValue("name"),
           project_id: projectId,
-          infrastructure_id: 4, // Hardcoded for Drift Assist
           secret: {
-            aws_access_key: driftAssistForm.getFieldValue("aws_access_key"),
-            aws_secret_key: driftAssistForm.getFieldValue("aws_secret_key"),
-            aws_region: driftAssistForm.getFieldValue("aws_region"),
+            cloud_provider: "aws",
+            access_key: driftAssistForm.getFieldValue("access_key"),
+            secret_access_key: driftAssistForm.getFieldValue("secret_access_key"),
+            region: driftAssistForm.getFieldValue("region"),
           },
-          access: driftAssistForm.getFieldValue("access"),
-          tags: tags && tags?.length && access === "Specific" ? tags : [],
+          access: "Internal", // Default to Internal since access type is not required
         };
 
         await createDriftAssistSecretMutation.mutateAsync(req);
@@ -145,9 +121,7 @@ const DriftAssistSignInDrawer: React.FC<DriftAssistSignInDrawerProps> = ({
           onFieldsChange={handleFormChange}
           form={driftAssistForm}
           initialValues={{
-            access: "Internal",
-            tags: "",
-            aws_region: "us-east-1",
+            region: "us-east-1",
             ...initialValues,
           }}
         >
@@ -160,7 +134,7 @@ const DriftAssistSignInDrawer: React.FC<DriftAssistSignInDrawerProps> = ({
           </Form.Item>
 
           <Form.Item<DriftAssistSignInFormFields>
-            name="aws_access_key"
+            name="access_key"
             label={
               <Flex align="center" gap={Metrics.SPACE_XS}>
                 <Text weight="semibold" text="AWS Access Key" />
@@ -202,7 +176,7 @@ const DriftAssistSignInDrawer: React.FC<DriftAssistSignInDrawerProps> = ({
           </Form.Item>
 
           <Form.Item<DriftAssistSignInFormFields>
-            name="aws_secret_key"
+            name="secret_access_key"
             label={
               <Flex align="center" gap={Metrics.SPACE_XS}>
                 <Text weight="semibold" text="AWS Secret Key" />
@@ -233,7 +207,7 @@ const DriftAssistSignInDrawer: React.FC<DriftAssistSignInDrawerProps> = ({
           </Form.Item>
 
           <Form.Item<DriftAssistSignInFormFields>
-            name="aws_region"
+            name="region"
             label={<Text weight="semibold" text="AWS Region" />}
             rules={[{ required: true, message: "AWS region is required" }]}
           >
@@ -247,44 +221,6 @@ const DriftAssistSignInDrawer: React.FC<DriftAssistSignInDrawerProps> = ({
             />
           </Form.Item>
 
-          <Form.Item<DriftAssistSignInFormFields>
-            label={<Text weight="semibold" text="Access Type" />}
-            name="access"
-            rules={[{ required: true, message: "Access type is required" }]}
-          >
-            <Radio.Group>
-              <Space direction="vertical">
-                <Radio value="Internal">
-                  <IconViewer
-                    Icon={InternalFilledIcon}
-                    color={Colors.COOL_GRAY_12}
-                    width={14}
-                    size={14}
-                  />{" "}
-                  &nbsp; Internal
-                </Radio>
-                <Radio value="Specific">
-                  <IconViewer
-                    Icon={LockOutlined}
-                    color={Colors.COOL_GRAY_6}
-                    width={14}
-                    size={14}
-                  />{" "}
-                  &nbsp; Application Specific
-                </Radio>
-              </Space>
-            </Radio.Group>
-          </Form.Item>
-
-          {access === "Specific" && (
-            <Form.Item<DriftAssistSignInFormFields>
-              name="tags"
-              rules={[{ message: "Invalid tag format. Use key:value pairs separated by spaces", validator: validateTagPair }]}
-              className="tags-input-cloud"
-            >
-              <Input placeholder="key1:value1 key2:value2" />
-            </Form.Item>
-          )}
         </Form>
 
         {/* Security Notice */}
