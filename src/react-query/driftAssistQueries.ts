@@ -390,22 +390,28 @@ export const useGetSecretValues = (integrationId: number, enabled: boolean = fal
 
 // Enhanced connectToAWS function that uses stored credentials
 export const useConnectToAWSWithIntegration = () => {
-  const { getSecretValues } = useIntegrationService();
+  const { getDriftAssistSecret } = useIntegrationService();
   
   const connectToAWSWithIntegration = async (integrationId: number): Promise<ConnectAWSResponse> => {
     console.log('🔐 DRIFT ASSIST DEBUG: connectToAWSWithIntegration called');
     console.log('📍 Integration ID:', integrationId);
 
     try {
-      // Use getSecretValues instead of getDriftAssistSecret for better compatibility
+      // Get the drift assist secret values from the integration
       console.log('🔍 Fetching secret values from ressuite backend...');
-      console.log('🔗 Backend URL:', `/integration/get_secret_values/${integrationId}`);
-      const secretValues = await getSecretValues(integrationId.toString());
+      console.log('🔗 Backend URL:', `/integration/getDriftAssistSecret/${integrationId}`);
+      const secretValues = await getDriftAssistSecret(integrationId.toString());
       
       console.log('📤 Retrieved secret values:', {
         rawResponse: secretValues,
-        secretKeys: Object.keys(secretValues || {}),
-        hasData: !!secretValues
+        hasAccessKey: !!secretValues?.access_key,
+        hasSecretKey: !!secretValues?.secret_access_key,
+        hasRegion: !!secretValues?.region,
+        cloudProvider: secretValues?.cloud_provider,
+        accessKeyLength: secretValues?.access_key?.length,
+        secretKeyLength: secretValues?.secret_access_key?.length,
+        region: secretValues?.region,
+        accessKeyPrefix: secretValues?.access_key?.substring(0, 4)
       });
 
       // Validate that we have all required fields
@@ -413,59 +419,22 @@ export const useConnectToAWSWithIntegration = () => {
         throw new Error('No secret values returned from backend');
       }
 
-      // Handle different possible field names and formats
-      let accessKey, secretKey, region;
-      
-      // Cast to any to handle different response types
-      const secretData = secretValues as any;
-      
-      // Try different possible field names for access key
-      accessKey = secretData.access_key || 
-                 secretData.AWS_ACCESS_KEY_ID || 
-                 secretData.aws_access_key_id ||
-                 secretData.accessKey;
-      
-      // Try different possible field names for secret key  
-      secretKey = secretData.secret_access_key || 
-                 secretData.AWS_SECRET_ACCESS_KEY || 
-                 secretData.aws_secret_access_key ||
-                 secretData.secretKey ||
-                 secretData.secret_key;
-      
-      // Try different possible field names for region
-      region = secretData.region || 
-              secretData.AWS_DEFAULT_REGION || 
-              secretData.aws_default_region ||
-              'us-east-1'; // Default fallback
-
-      console.log('🔍 Parsed credentials:', {
-        hasAccessKey: !!accessKey,
-        hasSecretKey: !!secretKey,
-        hasRegion: !!region,
-        accessKeyLength: accessKey?.length,
-        secretKeyLength: secretKey?.length,
-        region: region,
-        accessKeyPrefix: accessKey?.substring(0, 4),
-        allFields: Object.keys(secretValues)
-      });
-
-      if (!accessKey || !secretKey) {
+      if (!secretValues.access_key || !secretValues.secret_access_key) {
         console.error('❌ Missing required credentials in secret:', {
-          hasAccessKey: !!accessKey,
-          hasSecretKey: !!secretKey,
-          availableFields: Object.keys(secretValues),
-          secretValues: secretValues
+          hasAccessKey: !!secretValues.access_key,
+          hasSecretKey: !!secretValues.secret_access_key,
+          secretKeys: Object.keys(secretValues)
         });
-        throw new Error('Invalid credentials: Missing access_key or secret_access_key in stored secret');
+        throw new Error('Invalid credentials: Missing access_key or secret_access_key');
       }
 
       const connectRequest: ConnectAWSRequest = {
         provider: "aws",
         credentials: {
-          access_key: accessKey,
-          secret_key: secretKey,
+          access_key: secretValues.access_key,
+          secret_key: secretValues.secret_access_key,
         },
-        region: region,
+        region: secretValues.region || 'us-east-1', // Default region if not specified
       };
 
       console.log('📤 Connect request prepared:', {

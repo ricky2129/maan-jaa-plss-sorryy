@@ -116,18 +116,12 @@ const DriftAssist: React.FC<DriftAssistProps> = ({
     });
   }, [currentAnalysisData, analysisResults, isAnalyzing, hasStarted, currentStep]);
   
-  const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(
-    sessionId || initialSessionId
-  );
-  const [currentAwsCredentials, setCurrentAwsCredentials] = useState<any>(
-    awsCredentials || initialAwsCredentials
-  );
+  // Initialize session state properly
+  const [currentSessionId, setCurrentSessionId] = useState<string | undefined>();
+  const [currentAwsCredentials, setCurrentAwsCredentials] = useState<any>();
 
   // Handle sessionId and credentials from navigation state or props
   useEffect(() => {
-    const finalSessionId = sessionId || initialSessionId;
-    const finalCredentials = awsCredentials || initialAwsCredentials;
-    
     console.log('🔄 DriftAssist: useEffect triggered');
     console.log('📊 DriftAssist: Checking persisted state...');
     
@@ -143,41 +137,57 @@ const DriftAssist: React.FC<DriftAssistProps> = ({
       console.log('❌ DriftAssist: No persisted state found');
     }
     
-    // Then check props/navigation state
+    // Then check props/navigation state first
+    const finalSessionId = sessionId || initialSessionId;
+    const finalCredentials = awsCredentials || initialAwsCredentials;
+    
     if (finalSessionId && finalCredentials?.access_key && finalCredentials?.secret_key) {
+      console.log('🔗 DriftAssist: Using props/navigation session:', finalSessionId);
       setCurrentSessionId(finalSessionId);
       setCurrentAwsCredentials(finalCredentials);
       setCurrentStep(0); // Go to bucket selection
+      return;
     } 
+    
     // Then check session storage
-    else {
-      try {
-        const storedSession = sessionStorage.getItem('driftAssistSession');
-        if (storedSession) {
-          const session = JSON.parse(storedSession);
-          
-          if (session.sessionId && 
-              session.awsCredentials?.access_key && 
-              session.awsCredentials?.secret_key) {
+    try {
+      const storedSession = sessionStorage.getItem('driftAssistSession');
+      if (storedSession) {
+        const session = JSON.parse(storedSession);
+        console.log('🔗 DriftAssist: Found stored session:', session);
+        
+        if (session.sessionId) {
+          // Check if session is still fresh (less than 1 hour old)
+          if (Date.now() - session.timestamp < 3600000) {
+            console.log('✅ DriftAssist: Using stored session:', session.sessionId);
+            setCurrentSessionId(session.sessionId);
             
-            // Check if session is still fresh (less than 1 hour old)
-            if (Date.now() - session.timestamp < 3600000) {
-              setCurrentSessionId(session.sessionId);
+            // Handle both stored account and direct credential modes
+            if (session.integrationId) {
+              // Stored account mode - we have integration ID
+              setCurrentAwsCredentials({ integrationId: session.integrationId });
+            } else if (session.awsCredentials) {
+              // Direct credential mode - we have AWS credentials
               setCurrentAwsCredentials(session.awsCredentials);
-              setCurrentStep(0); // Go to bucket selection
-            } else {
-              setCurrentStep(0); // Force to bucket selection
             }
+            
+            setCurrentStep(0); // Go to bucket selection
           } else {
+            console.log('⏰ DriftAssist: Session expired, clearing...');
+            sessionStorage.removeItem('driftAssistSession');
             setCurrentStep(0); // Force to bucket selection
           }
         } else {
+          console.log('❌ DriftAssist: Invalid session data');
           setCurrentStep(0); // Force to bucket selection
         }
-      } catch (error) {
-        console.error('Error reading from session storage:', error);
+      } else {
+        console.log('❌ DriftAssist: No stored session found');
         setCurrentStep(0); // Force to bucket selection
       }
+    } catch (error) {
+      console.error('❌ DriftAssist: Error reading from session storage:', error);
+      setCurrentStep(0); // Force to bucket selection
     }
   }, [sessionId, awsCredentials, initialSessionId, initialAwsCredentials, hasPersistedState, loadStateFromStorage]);
 
@@ -1710,4 +1720,3 @@ const DriftAssist: React.FC<DriftAssistProps> = ({
 };
 
 export default DriftAssist;
-
