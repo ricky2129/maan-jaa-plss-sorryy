@@ -1619,7 +1619,13 @@ const DriftAssist: React.FC<DriftAssistProps> = ({
       {/* Connection Status */}
       {currentSessionId && (
         <Alert
-          message={`Connected to AWS (${currentAwsCredentials?.region || 'Unknown Region'})`}
+          message={
+            currentAwsCredentials?.integration_mode 
+              ? "Connected to AWS via Stored Credentials"
+              : currentAwsCredentials?.region 
+                ? `Connected to AWS (${currentAwsCredentials.region})`
+                : "Connected to AWS"
+          }
           type="info"
           showIcon
           icon={<CloudOutlined />}
