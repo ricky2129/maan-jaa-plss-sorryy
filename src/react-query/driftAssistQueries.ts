@@ -399,6 +399,7 @@ export const useConnectToAWSWithIntegration = () => {
     try {
       // Get the drift assist secret values from the integration
       console.log('🔍 Fetching secret values from ressuite backend...');
+      console.log('🔗 Backend URL:', `/integration/getDriftAssistSecret/${integrationId}`);
       const secretValues = await getDriftAssistSecret(integrationId.toString());
       
       console.log('📤 Retrieved secret values:', {
