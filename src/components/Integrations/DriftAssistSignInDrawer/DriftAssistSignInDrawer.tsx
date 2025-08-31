@@ -81,6 +81,7 @@ const DriftAssistSignInDrawer: React.FC<DriftAssistSignInDrawerProps> = ({
             secret_access_key: driftAssistForm.getFieldValue("secret_access_key"),
             region: driftAssistForm.getFieldValue("region"),
           },
+          access: "Internal", // Default access level for Drift Assist connections
         };
 
         await createDriftAssistSecretMutation.mutateAsync(req);
