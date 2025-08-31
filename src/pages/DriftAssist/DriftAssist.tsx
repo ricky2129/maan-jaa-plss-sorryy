@@ -1671,6 +1671,8 @@ const DriftAssist: React.FC<DriftAssistProps> = ({
           setDisabledSave={() => {}}
           skipNavigation={true}
           onFinish={() => {
+            console.log('🎯 DriftAssist onFinish: Called from ConfigureDriftAssist');
+            
             // The ConfigureDriftAssist component handles the connection logic
             // and stores the session data. We just need to close the drawer
             // and update our local state from the stored session data.
@@ -1679,12 +1681,31 @@ const DriftAssist: React.FC<DriftAssistProps> = ({
             // Read the session data that ConfigureDriftAssist stored
             try {
               const storedSession = sessionStorage.getItem('driftAssistSession');
+              console.log('🎯 DriftAssist onFinish: Retrieved session data:', storedSession);
+              
               if (storedSession) {
                 const session = JSON.parse(storedSession);
+                console.log('🎯 DriftAssist onFinish: Parsed session:', session);
                 
-                if (session.sessionId && session.awsCredentials) {
+                // Handle both direct credentials and integration-based connections
+                if (session.sessionId) {
                   setCurrentSessionId(session.sessionId);
-                  setCurrentAwsCredentials(session.awsCredentials);
+                  
+                  // For direct credentials
+                  if (session.awsCredentials) {
+                    setCurrentAwsCredentials(session.awsCredentials);
+                    console.log('✅ DriftAssist onFinish: Using direct credentials mode');
+                  }
+                  // For integration-based credentials, we don't need awsCredentials
+                  // as they're retrieved from the backend when needed
+                  else if (session.integrationId) {
+                    console.log('✅ DriftAssist onFinish: Using integration mode with ID:', session.integrationId);
+                    // Set a placeholder for credentials to indicate we're connected
+                    setCurrentAwsCredentials({ 
+                      integration_mode: true, 
+                      integration_id: session.integrationId 
+                    });
+                  }
                   
                   // Reset to bucket selection step
                   setCurrentStep(0);
@@ -1693,13 +1714,15 @@ const DriftAssist: React.FC<DriftAssistProps> = ({
                   
                   message.success('Successfully connected to AWS! You can now select a bucket.');
                 } else {
+                  console.error('❌ DriftAssist onFinish: No sessionId found in session data');
                   message.error('Failed to retrieve connection details. Please try again.');
                 }
               } else {
+                console.error('❌ DriftAssist onFinish: No session data found in sessionStorage');
                 message.error('Connection data not found. Please try again.');
               }
             } catch (error) {
-              console.error('Error reading session data:', error);
+              console.error('❌ DriftAssist onFinish: Error reading session data:', error);
               message.error('Failed to process connection. Please try again.');
             }
           }}
@@ -1710,4 +1733,3 @@ const DriftAssist: React.FC<DriftAssistProps> = ({
 };
 
 export default DriftAssist;
-
