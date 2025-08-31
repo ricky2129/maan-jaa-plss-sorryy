@@ -126,6 +126,28 @@ const useIntegrationService = () => {
     return res || "";
   };
 
+  /**
+   * Creates a Drift Assist secret.
+   * @param obj DriftAssistIntegrationRequest
+   * @returns Promise<any>
+   */
+  const createDriftAssistSecret = async (obj: any): Promise<any> => {
+    const res = await post(ApiUrl.CREATE_DRIFT_ASSIST_SECRET, obj);
+    return res || "";
+  };
+
+  /**
+   * Fetches a Drift Assist secret by integration id.
+   * @param integration_id string
+   * @returns Promise<any>
+   */
+  const getDriftAssistSecret = async (integration_id: string): Promise<any> => {
+    const res = await get(
+      resolveUrlParams(ApiUrl.GET_DRIFT_ASSIST_SECRET, { integration_id }),
+    );
+    return res || "";
+  };
+
   return {
     getSecretKeysByProjectId,
     getSecretKeysByApplicationId,
@@ -134,6 +156,8 @@ const useIntegrationService = () => {
     updateIntegration,
     createGremlinSecret,
     getSecretValues,
+    createDriftAssistSecret,
+    getDriftAssistSecret,
   };
 };
 

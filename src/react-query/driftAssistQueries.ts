@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { DriftAssistUrl } from "constant/url.constant";
 import { QUERY_KEY } from "constant/queryKey.constants";
+import { useIntegrationService } from "services";
 
 // Types based on original project
 interface AWSCredentials {
@@ -423,114 +424,10 @@ interface DriftAssistSecretResponse {
   region: string;
 }
 
-// API Functions for integration management
-const createDriftAssistSecret = async (data: DriftAssistIntegrationRequest): Promise<DriftAssistIntegration> => {
-  console.log('🔐 API: createDriftAssistSecret called with:', {
-    name: data.name,
-    projectId: data.project_id,
-    access: data.access,
-    tagsCount: data.tags?.length || 0
-  });
-
-  const response = await fetch('/integration/createDriftAssistSecret', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-    },
-    body: JSON.stringify(data),
-  });
-
-  console.log('🔐 API: createDriftAssistSecret response status:', response.status);
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    console.error('❌ API: createDriftAssistSecret failed:', errorData);
-    throw new Error(errorData.detail || errorData.error || 'Failed to create drift assist secret');
-  }
-
-  const result = await response.json();
-  console.log('✅ API: createDriftAssistSecret success:', { integrationId: result.id });
-  return result;
-};
-
-const listDriftAssistSecrets = async (projectId: number): Promise<DriftAssistIntegration[]> => {
-  console.log('📋 API: listDriftAssistSecrets called with:', { projectId });
-  
-  // Infrastructure ID 4 is hardcoded for Drift Assist as mentioned in requirements
-  const infrastructureId = 4;
-  
-  const response = await fetch(`/integration/list_secrets/${infrastructureId}/${projectId}`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-    },
-  });
-
-  console.log('📋 API: listDriftAssistSecrets response status:', response.status);
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    console.error('❌ API: listDriftAssistSecrets failed:', errorData);
-    throw new Error(errorData.detail || errorData.error || 'Failed to list drift assist secrets');
-  }
-
-  const result = await response.json();
-  console.log('✅ API: listDriftAssistSecrets success:', { secretsCount: result.length });
-  return result;
-};
-
-const getDriftAssistSecret = async (integrationId: number): Promise<DriftAssistSecretResponse> => {
-  console.log('🔑 API: getDriftAssistSecret called with:', { integrationId });
-  
-  const response = await fetch(`/integration/getDriftAssistSecret/${integrationId}`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-    },
-  });
-
-  console.log('🔑 API: getDriftAssistSecret response status:', response.status);
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    console.error('❌ API: getDriftAssistSecret failed:', errorData);
-    throw new Error(errorData.detail || errorData.error || 'Failed to get drift assist secret');
-  }
-
-  const result = await response.json();
-  console.log('✅ API: getDriftAssistSecret success');
-  return result;
-};
-
-const getSecretValues = async (integrationId: number): Promise<any> => {
-  console.log('🔓 API: getSecretValues called with:', { integrationId });
-  
-  const response = await fetch(`/integration/get_secret_values/${integrationId}`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-    },
-  });
-
-  console.log('🔓 API: getSecretValues response status:', response.status);
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    console.error('❌ API: getSecretValues failed:', errorData);
-    throw new Error(errorData.detail || errorData.error || 'Failed to get secret values');
-  }
-
-  const result = await response.json();
-  console.log('✅ API: getSecretValues success');
-  return result;
-};
-
 // React Query Hooks for integration management
 export const useCreateDriftAssistSecret = () => {
+  const { createDriftAssistSecret } = useIntegrationService();
+
   return useMutation({
     mutationFn: createDriftAssistSecret,
     mutationKey: [QUERY_KEY.CREATE_DRIFT_ASSIST_SECRET],
@@ -538,6 +435,8 @@ export const useCreateDriftAssistSecret = () => {
 };
 
 export const useListDriftAssistSecrets = (projectId: number, enabled: boolean = true) => {
+  const { getSecretKeysByProjectId } = useIntegrationService();
+  
   console.log('📋 useListDriftAssistSecrets called:', { 
     projectId, 
     enabled,
@@ -548,7 +447,8 @@ export const useListDriftAssistSecrets = (projectId: number, enabled: boolean = 
     queryKey: [QUERY_KEY.LIST_DRIFT_ASSIST_SECRETS, projectId],
     queryFn: () => {
       console.log('📋 Executing listDriftAssistSecrets for project:', projectId);
-      return listDriftAssistSecrets(projectId);
+      // Infrastructure ID 4 is hardcoded for Drift Assist as mentioned in requirements
+      return getSecretKeysByProjectId(4, projectId.toString());
     },
     enabled: enabled && !!projectId,
     staleTime: 30 * 1000, // 30 seconds
@@ -557,6 +457,8 @@ export const useListDriftAssistSecrets = (projectId: number, enabled: boolean = 
 };
 
 export const useGetDriftAssistSecret = (integrationId: number, enabled: boolean = false) => {
+  const { getDriftAssistSecret } = useIntegrationService();
+  
   console.log('🔑 useGetDriftAssistSecret called:', { 
     integrationId, 
     enabled,
@@ -567,7 +469,7 @@ export const useGetDriftAssistSecret = (integrationId: number, enabled: boolean 
     queryKey: [QUERY_KEY.GET_DRIFT_ASSIST_SECRET, integrationId],
     queryFn: () => {
       console.log('🔑 Executing getDriftAssistSecret for integration:', integrationId);
-      return getDriftAssistSecret(integrationId);
+      return getDriftAssistSecret(integrationId.toString());
     },
     enabled: enabled && !!integrationId,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -576,6 +478,8 @@ export const useGetDriftAssistSecret = (integrationId: number, enabled: boolean 
 };
 
 export const useGetSecretValues = (integrationId: number, enabled: boolean = false) => {
+  const { getSecretValues } = useIntegrationService();
+  
   console.log('🔓 useGetSecretValues called:', { 
     integrationId, 
     enabled,
@@ -586,7 +490,7 @@ export const useGetSecretValues = (integrationId: number, enabled: boolean = fal
     queryKey: [QUERY_KEY.GET_SECRET_VALUES, integrationId],
     queryFn: () => {
       console.log('🔓 Executing getSecretValues for integration:', integrationId);
-      return getSecretValues(integrationId);
+      return getSecretValues(integrationId.toString());
     },
     enabled: enabled && !!integrationId,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -595,70 +499,72 @@ export const useGetSecretValues = (integrationId: number, enabled: boolean = fal
 };
 
 // Enhanced connectToAWS function that uses stored credentials
-const connectToAWSWithIntegration = async (integrationId: number): Promise<ConnectAWSResponse> => {
-  console.log('🔐 DRIFT ASSIST DEBUG: connectToAWSWithIntegration called');
-  console.log('📍 Integration ID:', integrationId);
-
-  // First, get the secret values from the integration
-  const secretValues = await getSecretValues(integrationId);
+export const useConnectToAWSWithIntegration = () => {
+  const { getSecretValues } = useIntegrationService();
   
-  console.log('📤 Retrieved secret values:', {
-    hasAccessKey: !!secretValues.AWS_ACCESS_KEY_ID,
-    hasSecretKey: !!secretValues.AWS_SECRET_ACCESS_KEY,
-    hasRegion: !!secretValues.AWS_DEFAULT_REGION,
-    accessKeyLength: secretValues.AWS_ACCESS_KEY_ID?.length,
-    secretKeyLength: secretValues.AWS_SECRET_ACCESS_KEY?.length,
-    region: secretValues.AWS_DEFAULT_REGION
-  });
+  const connectToAWSWithIntegration = async (integrationId: number): Promise<ConnectAWSResponse> => {
+    console.log('🔐 DRIFT ASSIST DEBUG: connectToAWSWithIntegration called');
+    console.log('📍 Integration ID:', integrationId);
 
-  const connectRequest: ConnectAWSRequest = {
-    provider: "aws",
-    credentials: {
-      access_key: secretValues.AWS_ACCESS_KEY_ID,
-      secret_key: secretValues.AWS_SECRET_ACCESS_KEY,
-    },
-    region: secretValues.AWS_DEFAULT_REGION,
+    // Get the secret values from the integration
+    const secretValues = await getSecretValues(integrationId.toString());
+    
+    console.log('📤 Retrieved secret values:', {
+      hasAccessKey: !!secretValues.AWS_ACCESS_KEY_ID,
+      hasSecretKey: !!secretValues.AWS_SECRET_ACCESS_KEY,
+      hasRegion: !!secretValues.AWS_DEFAULT_REGION,
+      accessKeyLength: secretValues.AWS_ACCESS_KEY_ID?.length,
+      secretKeyLength: secretValues.AWS_SECRET_ACCESS_KEY?.length,
+      region: secretValues.AWS_DEFAULT_REGION
+    });
+
+    const connectRequest: ConnectAWSRequest = {
+      provider: "aws",
+      credentials: {
+        access_key: secretValues.AWS_ACCESS_KEY_ID,
+        secret_key: secretValues.AWS_SECRET_ACCESS_KEY,
+      },
+      region: secretValues.AWS_DEFAULT_REGION,
+    };
+
+    console.log('📤 Connect request prepared:', {
+      provider: connectRequest.provider,
+      region: connectRequest.region,
+      hasCredentials: !!connectRequest.credentials,
+      hasAccessKey: !!connectRequest.credentials?.access_key,
+      hasSecretKey: !!connectRequest.credentials?.secret_key
+    });
+
+    const response = await fetch(DriftAssistUrl.CONNECT_AWS, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(connectRequest),
+    });
+
+    console.log('📥 Response status:', response.status);
+
+    if (!response.ok) {
+      const responseText = await response.text();
+      console.error('❌ Error response body (raw):', responseText);
+      
+      let errorData;
+      try {
+        errorData = JSON.parse(responseText);
+      } catch {
+        errorData = { error: 'Invalid JSON response', raw: responseText };
+      }
+      
+      console.error('❌ Parsed error:', errorData);
+      throw new Error(errorData.detail || errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    console.log('✅ Success response:', result);
+    return result;
   };
 
-  console.log('📤 Connect request prepared:', {
-    provider: connectRequest.provider,
-    region: connectRequest.region,
-    hasCredentials: !!connectRequest.credentials,
-    hasAccessKey: !!connectRequest.credentials?.access_key,
-    hasSecretKey: !!connectRequest.credentials?.secret_key
-  });
-
-  const response = await fetch(DriftAssistUrl.CONNECT_AWS, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(connectRequest),
-  });
-
-  console.log('📥 Response status:', response.status);
-
-  if (!response.ok) {
-    const responseText = await response.text();
-    console.error('❌ Error response body (raw):', responseText);
-    
-    let errorData;
-    try {
-      errorData = JSON.parse(responseText);
-    } catch {
-      errorData = { error: 'Invalid JSON response', raw: responseText };
-    }
-    
-    console.error('❌ Parsed error:', errorData);
-    throw new Error(errorData.detail || errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  const result = await response.json();
-  console.log('✅ Success response:', result);
-  return result;
-};
-
-export const useConnectToAWSWithIntegration = () => {
   return useMutation({
     mutationFn: connectToAWSWithIntegration,
     mutationKey: [QUERY_KEY.CONNECT_AWS_WITH_INTEGRATION],

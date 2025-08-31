@@ -83,6 +83,8 @@ export const ApiUrl = {
   UPDATE_INTEGRATION: "/integration/updateIntegration",
   CREATE_GREMLIN_SECRET: "/integration/createGremlinSecret",
   GET_SECRET_VALUES: "/integration/get_secret_values/:integration_id",
+  CREATE_DRIFT_ASSIST_SECRET: "/integration/createDriftAssistSecret",
+  GET_DRIFT_ASSIST_SECRET: "/integration/getDriftAssistSecret/:integration_id",
 
   //User URLs
   SEARCH_USER: "/usersearchquery",
