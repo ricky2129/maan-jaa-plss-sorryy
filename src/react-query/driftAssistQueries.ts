@@ -327,36 +327,66 @@ export const useListDriftAssistSecrets = (projectId: number, enabled: boolean = 
     projectId, 
     enabled,
     hasProjectId: !!projectId,
-    infrastructureId: 4
+    infrastructureId: 'DriftAssist (trying ID 4 first, then others)'
   });
   
   return useQuery({
     queryKey: [QUERY_KEY.LIST_DRIFT_ASSIST_SECRETS, projectId],
     queryFn: async () => {
-      console.log('🔍 ACCOUNT SELECTION DEBUG: Executing getSecretKeysByProjectId with:', {
-        infrastructureId: 4,
-        projectId: projectId.toString(),
-        url: `/integration/list_secrets/4/${projectId}`
-      });
+      console.log('🔍 ACCOUNT SELECTION DEBUG: Starting secret retrieval...');
       
+      // Try infrastructure ID 4 first (most likely for DriftAssist)
       try {
+        console.log('🔍 ACCOUNT SELECTION DEBUG: Trying infrastructure ID 4...');
         const result = await getSecretKeysByProjectId(4, projectId.toString());
-        console.log('🔍 ACCOUNT SELECTION DEBUG: getSecretKeysByProjectId result:', {
-          success: true,
-          resultType: typeof result,
-          isArray: Array.isArray(result),
-          length: Array.isArray(result) ? result.length : 'N/A',
-          result: result
-        });
-        return result;
+        
+        if (result && Array.isArray(result) && result.length > 0) {
+          console.log('🔍 ACCOUNT SELECTION DEBUG: Found secrets with infrastructure ID 4:', {
+            success: true,
+            infrastructureId: 4,
+            resultType: typeof result,
+            isArray: Array.isArray(result),
+            length: result.length,
+            result: result
+          });
+          return result;
+        } else {
+          console.log('🔍 ACCOUNT SELECTION DEBUG: No secrets found for infrastructure ID 4, trying others...');
+        }
       } catch (error) {
-        console.error('🔍 ACCOUNT SELECTION DEBUG: getSecretKeysByProjectId failed:', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-          errorType: error?.constructor?.name || 'Unknown',
-          stack: error instanceof Error ? error.stack : undefined
+        console.log('🔍 ACCOUNT SELECTION DEBUG: Infrastructure ID 4 failed:', {
+          error: error instanceof Error ? error.message : 'Unknown error'
         });
-        throw error;
       }
+      
+      // Try other common infrastructure IDs
+      const otherIds = [5, 6, 7, 8, 9, 10];
+      for (const id of otherIds) {
+        try {
+          console.log(`🔍 ACCOUNT SELECTION DEBUG: Trying infrastructure ID ${id}...`);
+          const result = await getSecretKeysByProjectId(id, projectId.toString());
+          
+          if (result && Array.isArray(result) && result.length > 0) {
+            console.log(`🔍 ACCOUNT SELECTION DEBUG: Found secrets with infrastructure ID ${id}:`, {
+              success: true,
+              infrastructureId: id,
+              resultType: typeof result,
+              isArray: Array.isArray(result),
+              length: result.length,
+              result: result
+            });
+            return result;
+          }
+        } catch (error) {
+          console.log(`🔍 ACCOUNT SELECTION DEBUG: Infrastructure ID ${id} failed:`, {
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+      
+      // If we get here, none of the IDs worked
+      console.error('🔍 ACCOUNT SELECTION DEBUG: No DriftAssist secrets found with any infrastructure ID');
+      throw new Error('No DriftAssist accounts found. Please add a DriftAssist integration first.');
     },
     enabled: enabled && !!projectId,
     staleTime: 30 * 1000, // 30 seconds
