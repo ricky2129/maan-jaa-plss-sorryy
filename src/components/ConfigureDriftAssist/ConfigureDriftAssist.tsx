@@ -131,7 +131,16 @@ const ConfigureDriftAssist: React.FC<ConfigureDriftAssistProps> = ({
           return;
         }
 
+        console.log('🔧 ConfigureDriftAssist: Calling connectToAWSWithIntegrationMutation...');
+        console.log('🔧 ConfigureDriftAssist: Integration ID:', values.ACCOUNT_SELECTION);
+        
         const response = await connectToAWSWithIntegrationMutation.mutateAsync(values.ACCOUNT_SELECTION);
+        
+        console.log('✅ ConfigureDriftAssist: Received response from mutation:', {
+          response,
+          hasSessionId: !!response?.session_id,
+          sessionId: response?.session_id
+        });
         
         // Store session data
         const sessionData = {
