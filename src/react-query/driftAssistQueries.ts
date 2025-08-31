@@ -420,7 +420,7 @@ export const useConnectToAWSWithIntegration = () => {
       }
 
       // Check if secretValues is an error response
-      if (typeof secretValues === 'string' && secretValues.includes('error')) {
+      if (typeof secretValues === 'string' && secretValues.indexOf('error') !== -1) {
         console.error('❌ Backend returned error string:', secretValues);
         throw new Error(`Backend error: ${secretValues}`);
       }
@@ -473,7 +473,12 @@ export const useConnectToAWSWithIntegration = () => {
       });
 
       console.log('📥 Response status:', response.status);
-      console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
+      // Convert headers to object for logging (compatible with older JS targets)
+      const headersObj: Record<string, string> = {};
+      response.headers.forEach((value, key) => {
+        headersObj[key] = value;
+      });
+      console.log('📥 Response headers:', headersObj);
 
       if (!response.ok) {
         const responseText = await response.text();
@@ -523,7 +528,7 @@ export const useConnectToAWSWithIntegration = () => {
       // Re-throw with more context but preserve the original error message
       if (error instanceof Error) {
         // Don't wrap the error message if it's already descriptive
-        if (error.message.includes('Failed to retrieve connection details')) {
+        if (error.message.indexOf('Failed to retrieve connection details') !== -1) {
           throw error;
         } else {
           throw new Error(error.message);
