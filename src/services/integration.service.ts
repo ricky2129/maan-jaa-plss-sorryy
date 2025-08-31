@@ -142,10 +142,34 @@ const useIntegrationService = () => {
    * @returns Promise<any>
    */
   const getDriftAssistSecret = async (integration_id: string): Promise<any> => {
-    const res = await get(
-      resolveUrlParams(ApiUrl.GET_DRIFT_ASSIST_SECRET, { integration_id }),
-    );
-    return res || "";
+    console.log('🔐 INTEGRATION SERVICE DEBUG: getDriftAssistSecret called');
+    console.log('📍 Integration ID:', integration_id);
+    console.log('📍 Integration ID type:', typeof integration_id);
+    
+    const resolvedUrl = resolveUrlParams(ApiUrl.GET_DRIFT_ASSIST_SECRET, { integration_id });
+    console.log('🌐 Resolved URL:', resolvedUrl);
+    console.log('🌐 Base URL template:', ApiUrl.GET_DRIFT_ASSIST_SECRET);
+    
+    try {
+      console.log('📤 Making GET request to backend...');
+      const res = await get(resolvedUrl);
+      console.log('📥 Backend response received:', {
+        success: true,
+        responseType: typeof res,
+        hasData: !!res,
+        response: res
+      });
+      return res || "";
+    } catch (error) {
+      console.error('❌ getDriftAssistSecret failed:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        errorType: error?.constructor?.name || 'Unknown',
+        url: resolvedUrl,
+        integrationId: integration_id,
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      throw error;
+    }
   };
 
   return {
