@@ -162,7 +162,18 @@ const ConfigureDriftAssist: React.FC<ConfigureDriftAssistProps> = ({
         errorType: error?.constructor?.name || 'Unknown',
         stack: error instanceof Error ? error.stack : undefined
       });
-      message.error(error instanceof Error ? error.message : 'Failed to connect to AWS');
+      
+      // Safely extract error message
+      let errorMessage = 'Failed to connect to AWS';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error && typeof error === 'object' && 'message' in error) {
+        errorMessage = String(error.message);
+      }
+      
+      message.error(errorMessage);
     }
   };
 

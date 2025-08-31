@@ -500,31 +500,32 @@ export const useGetSecretValues = (integrationId: number, enabled: boolean = fal
 
 // Enhanced connectToAWS function that uses stored credentials
 export const useConnectToAWSWithIntegration = () => {
-  const { getSecretValues } = useIntegrationService();
+  const { getDriftAssistSecret } = useIntegrationService();
   
   const connectToAWSWithIntegration = async (integrationId: number): Promise<ConnectAWSResponse> => {
     console.log('🔐 DRIFT ASSIST DEBUG: connectToAWSWithIntegration called');
     console.log('📍 Integration ID:', integrationId);
 
-    // Get the secret values from the integration
-    const secretValues = await getSecretValues(integrationId.toString());
+    // Get the drift assist secret values from the integration
+    const secretValues = await getDriftAssistSecret(integrationId.toString());
     
     console.log('📤 Retrieved secret values:', {
-      hasAccessKey: !!secretValues.AWS_ACCESS_KEY_ID,
-      hasSecretKey: !!secretValues.AWS_SECRET_ACCESS_KEY,
-      hasRegion: !!secretValues.AWS_DEFAULT_REGION,
-      accessKeyLength: secretValues.AWS_ACCESS_KEY_ID?.length,
-      secretKeyLength: secretValues.AWS_SECRET_ACCESS_KEY?.length,
-      region: secretValues.AWS_DEFAULT_REGION
+      hasAccessKey: !!secretValues.access_key,
+      hasSecretKey: !!secretValues.secret_access_key,
+      hasRegion: !!secretValues.region,
+      cloudProvider: secretValues.cloud_provider,
+      accessKeyLength: secretValues.access_key?.length,
+      secretKeyLength: secretValues.secret_access_key?.length,
+      region: secretValues.region
     });
 
     const connectRequest: ConnectAWSRequest = {
       provider: "aws",
       credentials: {
-        access_key: secretValues.AWS_ACCESS_KEY_ID,
-        secret_key: secretValues.AWS_SECRET_ACCESS_KEY,
+        access_key: secretValues.access_key,
+        secret_key: secretValues.secret_access_key,
       },
-      region: secretValues.AWS_DEFAULT_REGION,
+      region: secretValues.region,
     };
 
     console.log('📤 Connect request prepared:', {

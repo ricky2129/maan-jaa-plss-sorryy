@@ -89,7 +89,24 @@ const DriftAssistSignInDrawer: React.FC<DriftAssistSignInDrawerProps> = ({
       onSuccess();
     } catch (err) {
       console.error("DriftAssistSignInDrawer: Error creating secret:", err);
-      error(err?.response?.data?.detail || "Failed to create Drift Assist connection");
+      
+      // Safely extract error message
+      let errorMessage = "Failed to create Drift Assist connection";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err && typeof err === 'object') {
+        if ('response' in err && err.response && typeof err.response === 'object' && 
+            'data' in err.response && err.response.data && typeof err.response.data === 'object' &&
+            'detail' in err.response.data) {
+          errorMessage = String(err.response.data.detail);
+        } else if ('message' in err) {
+          errorMessage = String(err.message);
+        }
+      }
+      
+      error(errorMessage);
     } finally {
       setIsLoading(false);
     }
