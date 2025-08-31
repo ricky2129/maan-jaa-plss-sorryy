@@ -399,7 +399,6 @@ export const useConnectToAWSWithIntegration = () => {
     try {
       // Get the drift assist secret values from the integration
       console.log('🔍 Fetching secret values from ressuite backend...');
-      console.log('🔗 Backend URL:', `/integration/getDriftAssistSecret/${integrationId}`);
       const secretValues = await getDriftAssistSecret(integrationId.toString());
       
       console.log('📤 Retrieved secret values:', {
@@ -416,16 +415,31 @@ export const useConnectToAWSWithIntegration = () => {
 
       // Validate that we have all required fields
       if (!secretValues) {
-        throw new Error('No secret values returned from backend');
+        console.error('❌ No secret values returned from backend');
+        throw new Error('No secret values returned from backend. Please check if the integration exists and has valid credentials.');
       }
 
+      // Check if secretValues is an error response
+      if (typeof secretValues === 'string' && secretValues.includes('error')) {
+        console.error('❌ Backend returned error string:', secretValues);
+        throw new Error(`Backend error: ${secretValues}`);
+      }
+
+      // Handle case where backend returns empty string or invalid data
+      if (typeof secretValues === 'string' && secretValues === '') {
+        console.error('❌ Backend returned empty string');
+        throw new Error('Backend returned empty response. Please check if the integration has valid credentials.');
+      }
+
+      // Validate required fields exist
       if (!secretValues.access_key || !secretValues.secret_access_key) {
         console.error('❌ Missing required credentials in secret:', {
           hasAccessKey: !!secretValues.access_key,
           hasSecretKey: !!secretValues.secret_access_key,
-          secretKeys: Object.keys(secretValues)
+          secretKeys: Object.keys(secretValues),
+          secretValues: secretValues
         });
-        throw new Error('Invalid credentials: Missing access_key or secret_access_key');
+        throw new Error('Invalid credentials: Missing access_key or secret_access_key. Please check your stored AWS credentials.');
       }
 
       const connectRequest: ConnectAWSRequest = {
@@ -459,7 +473,7 @@ export const useConnectToAWSWithIntegration = () => {
       });
 
       console.log('📥 Response status:', response.status);
-      console.log('📥 Response headers:', response.headers);
+      console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         const responseText = await response.text();
@@ -480,7 +494,18 @@ export const useConnectToAWSWithIntegration = () => {
           body: JSON.stringify(connectRequest, null, 2)
         });
         
-        throw new Error(errorData.detail || errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        // Provide more specific error messages based on status code
+        let errorMessage = errorData.detail || errorData.error || `HTTP ${response.status}: ${response.statusText}`;
+        
+        if (response.status === 401 || response.status === 403) {
+          errorMessage = 'Invalid AWS credentials. Please check your stored access key and secret key.';
+        } else if (response.status === 422) {
+          errorMessage = 'Invalid request format. Please check your credentials format.';
+        } else if (response.status >= 500) {
+          errorMessage = 'DriftAssist backend server error. Please try again later.';
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -495,9 +520,14 @@ export const useConnectToAWSWithIntegration = () => {
         stack: error instanceof Error ? error.stack : undefined
       });
       
-      // Re-throw with more context
+      // Re-throw with more context but preserve the original error message
       if (error instanceof Error) {
-        throw new Error(`Failed to retrieve connection details: ${error.message}`);
+        // Don't wrap the error message if it's already descriptive
+        if (error.message.includes('Failed to retrieve connection details')) {
+          throw error;
+        } else {
+          throw new Error(error.message);
+        }
       } else {
         throw new Error('Failed to retrieve connection details: Unknown error occurred');
       }
