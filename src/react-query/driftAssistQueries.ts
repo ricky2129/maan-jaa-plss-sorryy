@@ -327,66 +327,36 @@ export const useListDriftAssistSecrets = (projectId: number, enabled: boolean = 
     projectId, 
     enabled,
     hasProjectId: !!projectId,
-    infrastructureId: 'DriftAssist (trying ID 4 first, then others)'
+    infrastructureId: 4
   });
   
   return useQuery({
     queryKey: [QUERY_KEY.LIST_DRIFT_ASSIST_SECRETS, projectId],
     queryFn: async () => {
-      console.log('🔍 ACCOUNT SELECTION DEBUG: Starting secret retrieval...');
+      console.log('🔍 ACCOUNT SELECTION DEBUG: Executing getSecretKeysByProjectId with:', {
+        infrastructureId: 4,
+        projectId: projectId.toString(),
+        url: `/integration/list_secrets/4/${projectId}`
+      });
       
-      // Try infrastructure ID 4 first (most likely for DriftAssist)
       try {
-        console.log('🔍 ACCOUNT SELECTION DEBUG: Trying infrastructure ID 4...');
         const result = await getSecretKeysByProjectId(4, projectId.toString());
-        
-        if (result && Array.isArray(result) && result.length > 0) {
-          console.log('🔍 ACCOUNT SELECTION DEBUG: Found secrets with infrastructure ID 4:', {
-            success: true,
-            infrastructureId: 4,
-            resultType: typeof result,
-            isArray: Array.isArray(result),
-            length: result.length,
-            result: result
-          });
-          return result;
-        } else {
-          console.log('🔍 ACCOUNT SELECTION DEBUG: No secrets found for infrastructure ID 4, trying others...');
-        }
-      } catch (error) {
-        console.log('🔍 ACCOUNT SELECTION DEBUG: Infrastructure ID 4 failed:', {
-          error: error instanceof Error ? error.message : 'Unknown error'
+        console.log('🔍 ACCOUNT SELECTION DEBUG: getSecretKeysByProjectId result:', {
+          success: true,
+          resultType: typeof result,
+          isArray: Array.isArray(result),
+          length: Array.isArray(result) ? result.length : 'N/A',
+          result: result
         });
+        return result;
+      } catch (error) {
+        console.error('🔍 ACCOUNT SELECTION DEBUG: getSecretKeysByProjectId failed:', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          errorType: error?.constructor?.name || 'Unknown',
+          stack: error instanceof Error ? error.stack : undefined
+        });
+        throw error;
       }
-      
-      // Try other common infrastructure IDs
-      const otherIds = [5, 6, 7, 8, 9, 10];
-      for (const id of otherIds) {
-        try {
-          console.log(`🔍 ACCOUNT SELECTION DEBUG: Trying infrastructure ID ${id}...`);
-          const result = await getSecretKeysByProjectId(id, projectId.toString());
-          
-          if (result && Array.isArray(result) && result.length > 0) {
-            console.log(`🔍 ACCOUNT SELECTION DEBUG: Found secrets with infrastructure ID ${id}:`, {
-              success: true,
-              infrastructureId: id,
-              resultType: typeof result,
-              isArray: Array.isArray(result),
-              length: result.length,
-              result: result
-            });
-            return result;
-          }
-        } catch (error) {
-          console.log(`🔍 ACCOUNT SELECTION DEBUG: Infrastructure ID ${id} failed:`, {
-            error: error instanceof Error ? error.message : 'Unknown error'
-          });
-        }
-      }
-      
-      // If we get here, none of the IDs worked
-      console.error('🔍 ACCOUNT SELECTION DEBUG: No DriftAssist secrets found with any infrastructure ID');
-      throw new Error('No DriftAssist accounts found. Please add a DriftAssist integration first.');
     },
     enabled: enabled && !!projectId,
     staleTime: 30 * 1000, // 30 seconds
@@ -425,36 +395,47 @@ export const useConnectToAWSWithIntegration = () => {
   const connectToAWSWithIntegration = async (integrationId: number): Promise<ConnectAWSResponse> => {
     console.log('🔐 DRIFT ASSIST DEBUG: connectToAWSWithIntegration called');
     console.log('📍 Integration ID:', integrationId);
+    console.log('📍 Integration ID type:', typeof integrationId);
 
     try {
       // Get the drift assist secret values from the integration
       console.log('🔍 Fetching secret values from ressuite backend...');
+      console.log('🔍 Calling getDriftAssistSecret with:', integrationId.toString());
+      console.log('🔍 Expected URL will be: /integration/getDriftAssistSecret/' + integrationId);
+      
       const secretValues = await getDriftAssistSecret(integrationId.toString());
       
-      console.log('📤 Retrieved secret values:', {
-        rawResponse: secretValues,
-        hasAccessKey: !!secretValues?.access_key,
-        hasSecretKey: !!secretValues?.secret_access_key,
-        hasRegion: !!secretValues?.region,
-        cloudProvider: secretValues?.cloud_provider,
-        accessKeyLength: secretValues?.access_key?.length,
-        secretKeyLength: secretValues?.secret_access_key?.length,
-        region: secretValues?.region,
-        accessKeyPrefix: secretValues?.access_key?.substring(0, 4)
-      });
+      console.log('📤 Retrieved secret values - Raw response:', secretValues);
+      console.log('📤 Retrieved secret values - Type:', typeof secretValues);
+      console.log('📤 Retrieved secret values - Keys:', secretValues ? Object.keys(secretValues) : 'null/undefined');
+      
+      if (secretValues) {
+        console.log('📤 Secret values details:', {
+          hasAccessKey: !!secretValues?.access_key,
+          hasSecretKey: !!secretValues?.secret_access_key,
+          hasRegion: !!secretValues?.region,
+          cloudProvider: secretValues?.cloud_provider,
+          accessKeyLength: secretValues?.access_key?.length,
+          secretKeyLength: secretValues?.secret_access_key?.length,
+          region: secretValues?.region,
+          accessKeyPrefix: secretValues?.access_key?.substring(0, 4)
+        });
+      }
 
       // Validate that we have all required fields
       if (!secretValues) {
-        throw new Error('No secret values returned from backend');
+        console.error('❌ No secret values returned from backend');
+        throw new Error('No secret values returned from backend - integration may not exist or be accessible');
       }
 
       if (!secretValues.access_key || !secretValues.secret_access_key) {
         console.error('❌ Missing required credentials in secret:', {
           hasAccessKey: !!secretValues.access_key,
           hasSecretKey: !!secretValues.secret_access_key,
-          secretKeys: Object.keys(secretValues)
+          secretKeys: Object.keys(secretValues),
+          fullResponse: secretValues
         });
-        throw new Error('Invalid credentials: Missing access_key or secret_access_key');
+        throw new Error('Invalid credentials: Missing access_key or secret_access_key in stored secret');
       }
 
       const connectRequest: ConnectAWSRequest = {
@@ -488,7 +469,7 @@ export const useConnectToAWSWithIntegration = () => {
       });
 
       console.log('📥 Response status:', response.status);
-      console.log('📥 Response headers:', response.headers);
+      console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         const responseText = await response.text();
@@ -517,7 +498,7 @@ export const useConnectToAWSWithIntegration = () => {
       return result;
       
     } catch (error) {
-      console.error('❌ connectToAWSWithIntegration failed:', {
+      console.error('❌ connectToAWSWithIntegration failed at step:', {
         error: error instanceof Error ? error.message : 'Unknown error',
         errorType: error?.constructor?.name || 'Unknown',
         integrationId,
