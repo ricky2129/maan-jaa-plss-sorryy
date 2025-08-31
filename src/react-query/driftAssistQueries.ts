@@ -506,64 +506,111 @@ export const useConnectToAWSWithIntegration = () => {
     console.log('🔐 DRIFT ASSIST DEBUG: connectToAWSWithIntegration called');
     console.log('📍 Integration ID:', integrationId);
 
-    // Get the drift assist secret values from the integration
-    const secretValues = await getDriftAssistSecret(integrationId.toString());
-    
-    console.log('📤 Retrieved secret values:', {
-      hasAccessKey: !!secretValues.access_key,
-      hasSecretKey: !!secretValues.secret_access_key,
-      hasRegion: !!secretValues.region,
-      cloudProvider: secretValues.cloud_provider,
-      accessKeyLength: secretValues.access_key?.length,
-      secretKeyLength: secretValues.secret_access_key?.length,
-      region: secretValues.region
-    });
-
-    const connectRequest: ConnectAWSRequest = {
-      provider: "aws",
-      credentials: {
-        access_key: secretValues.access_key,
-        secret_key: secretValues.secret_access_key,
-      },
-      region: secretValues.region,
-    };
-
-    console.log('📤 Connect request prepared:', {
-      provider: connectRequest.provider,
-      region: connectRequest.region,
-      hasCredentials: !!connectRequest.credentials,
-      hasAccessKey: !!connectRequest.credentials?.access_key,
-      hasSecretKey: !!connectRequest.credentials?.secret_key
-    });
-
-    const response = await fetch(DriftAssistUrl.CONNECT_AWS, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(connectRequest),
-    });
-
-    console.log('📥 Response status:', response.status);
-
-    if (!response.ok) {
-      const responseText = await response.text();
-      console.error('❌ Error response body (raw):', responseText);
+    try {
+      // Get the drift assist secret values from the integration
+      console.log('🔍 Fetching secret values from ressuite backend...');
+      const secretValues = await getDriftAssistSecret(integrationId.toString());
       
-      let errorData;
-      try {
-        errorData = JSON.parse(responseText);
-      } catch {
-        errorData = { error: 'Invalid JSON response', raw: responseText };
+      console.log('📤 Retrieved secret values:', {
+        rawResponse: secretValues,
+        hasAccessKey: !!secretValues?.access_key,
+        hasSecretKey: !!secretValues?.secret_access_key,
+        hasRegion: !!secretValues?.region,
+        cloudProvider: secretValues?.cloud_provider,
+        accessKeyLength: secretValues?.access_key?.length,
+        secretKeyLength: secretValues?.secret_access_key?.length,
+        region: secretValues?.region,
+        accessKeyPrefix: secretValues?.access_key?.substring(0, 4)
+      });
+
+      // Validate that we have all required fields
+      if (!secretValues) {
+        throw new Error('No secret values returned from backend');
       }
-      
-      console.error('❌ Parsed error:', errorData);
-      throw new Error(errorData.detail || errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-    }
 
-    const result = await response.json();
-    console.log('✅ Success response:', result);
-    return result;
+      if (!secretValues.access_key || !secretValues.secret_access_key) {
+        console.error('❌ Missing required credentials in secret:', {
+          hasAccessKey: !!secretValues.access_key,
+          hasSecretKey: !!secretValues.secret_access_key,
+          secretKeys: Object.keys(secretValues)
+        });
+        throw new Error('Invalid credentials: Missing access_key or secret_access_key');
+      }
+
+      const connectRequest: ConnectAWSRequest = {
+        provider: "aws",
+        credentials: {
+          access_key: secretValues.access_key,
+          secret_key: secretValues.secret_access_key,
+        },
+        region: secretValues.region || 'us-east-1', // Default region if not specified
+      };
+
+      console.log('📤 Connect request prepared:', {
+        provider: connectRequest.provider,
+        region: connectRequest.region,
+        hasCredentials: !!connectRequest.credentials,
+        hasAccessKey: !!connectRequest.credentials?.access_key,
+        hasSecretKey: !!connectRequest.credentials?.secret_key,
+        accessKeyLength: connectRequest.credentials?.access_key?.length,
+        secretKeyLength: connectRequest.credentials?.secret_key?.length,
+        accessKeyPrefix: connectRequest.credentials?.access_key?.substring(0, 4)
+      });
+
+      console.log('🌐 Sending request to Drift Assist backend:', DriftAssistUrl.CONNECT_AWS);
+
+      const response = await fetch(DriftAssistUrl.CONNECT_AWS, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(connectRequest),
+      });
+
+      console.log('📥 Response status:', response.status);
+      console.log('📥 Response headers:', response.headers);
+
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.error('❌ Error response body (raw):', responseText);
+        
+        let errorData;
+        try {
+          errorData = JSON.parse(responseText);
+        } catch {
+          errorData = { error: 'Invalid JSON response', raw: responseText };
+        }
+        
+        console.error('❌ Parsed error:', errorData);
+        console.error('❌ Full request details:', {
+          url: DriftAssistUrl.CONNECT_AWS,
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(connectRequest, null, 2)
+        });
+        
+        throw new Error(errorData.detail || errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Success response:', result);
+      return result;
+      
+    } catch (error) {
+      console.error('❌ connectToAWSWithIntegration failed:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        errorType: error?.constructor?.name || 'Unknown',
+        integrationId,
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      
+      // Re-throw with more context
+      if (error instanceof Error) {
+        throw new Error(`Failed to retrieve connection details: ${error.message}`);
+      } else {
+        throw new Error('Failed to retrieve connection details: Unknown error occurred');
+      }
+    }
   };
 
   return useMutation({
