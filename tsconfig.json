@@ -7,7 +7,14 @@
     "module": "ES2020",
     "moduleResolution": "Node",
     "skipLibCheck": true,
-    "outDir": "dist"
+    "outDir": "dist",
+    "target": "ES2017",
+    "lib": ["ES2017", "DOM", "DOM.Iterable"],
+    "esModuleInterop": true,
+    "strict": false,
+    "noEmit": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true
   },
   "include": ["./src", "./src/test/vitest.setup.ts"],
   "types": ["node", "jest", "@testing-library/jest-dom"]
