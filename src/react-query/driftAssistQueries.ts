@@ -66,20 +66,6 @@ interface AnalyzeBucketResponse {
 
 // API Functions
 const connectToAWS = async (data: ConnectAWSRequest): Promise<ConnectAWSResponse> => {
-  console.log('🔐 DRIFT ASSIST DEBUG: connectToAWS called');
-  console.log('📍 Backend URL:', DriftAssistUrl.CONNECT_AWS);
-  console.log('📤 Request payload:', JSON.stringify(data, null, 2));
-  console.log('📤 Request details:', {
-    provider: data.provider,
-    region: data.region,
-    hasCredentials: !!data.credentials,
-    hasAccessKey: !!data.credentials?.access_key,
-    hasSecretKey: !!data.credentials?.secret_key,
-    accessKeyLength: data.credentials?.access_key?.length,
-    secretKeyLength: data.credentials?.secret_key?.length,
-    accessKeyPrefix: data.credentials?.access_key?.substring(0, 4)
-  });
-
   const response = await fetch(DriftAssistUrl.CONNECT_AWS, {
     method: 'POST',
     headers: {
@@ -88,12 +74,8 @@ const connectToAWS = async (data: ConnectAWSRequest): Promise<ConnectAWSResponse
     body: JSON.stringify(data),
   });
 
-  console.log('📥 Response status:', response.status);
-  console.log('📥 Response headers:', response.headers);
-
   if (!response.ok) {
     const responseText = await response.text();
-    console.error('❌ Error response body (raw):', responseText);
     
     let errorData;
     try {
@@ -102,28 +84,14 @@ const connectToAWS = async (data: ConnectAWSRequest): Promise<ConnectAWSResponse
       errorData = { error: 'Invalid JSON response', raw: responseText };
     }
     
-    console.error('❌ Parsed error:', errorData);
-    console.error('❌ Request that failed:', {
-      url: DriftAssistUrl.CONNECT_AWS,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data, null, 2)
-    });
-    
     throw new Error(errorData.detail || errorData.error || `HTTP ${response.status}: ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('✅ Success response:', result);
   return result;
 };
 
 const getS3Buckets = async (sessionId: string): Promise<GetS3BucketsResponse> => {
-  console.log('🪣 API: getS3Buckets called with:', {
-    sessionId,
-    url: `${DriftAssistUrl.GET_S3_BUCKETS}/${sessionId}`
-  });
-
   const response = await fetch(`${DriftAssistUrl.GET_S3_BUCKETS}/${sessionId}`, {
     method: 'GET',
     headers: {
@@ -131,26 +99,16 @@ const getS3Buckets = async (sessionId: string): Promise<GetS3BucketsResponse> =>
     },
   });
 
-  console.log('🪣 API: getS3Buckets response status:', response.status);
-
   if (!response.ok) {
     const errorData = await response.json();
-    console.error('❌ API: getS3Buckets failed:', errorData);
     throw new Error(errorData.detail?.details || errorData.detail || errorData.error || 'Failed to load S3 buckets');
   }
 
   const result = await response.json();
-  console.log('✅ API: getS3Buckets success:', { bucketCount: result.buckets?.length || 0 });
   return result;
 };
 
 const getStateFiles = async (sessionId: string, bucketName: string): Promise<GetStateFilesResponse> => {
-  console.log('📄 API: getStateFiles called with:', {
-    sessionId,
-    bucketName,
-    url: `${DriftAssistUrl.GET_STATE_FILES}/${sessionId}/${bucketName}/state-files`
-  });
-
   const response = await fetch(`${DriftAssistUrl.GET_STATE_FILES}/${sessionId}/${bucketName}/state-files`, {
     method: 'GET',
     headers: {
@@ -158,11 +116,8 @@ const getStateFiles = async (sessionId: string, bucketName: string): Promise<Get
     },
   });
 
-  console.log('📄 API: getStateFiles response status:', response.status);
-
   if (!response.ok) {
     const errorData = await response.json();
-    console.error('❌ API: getStateFiles failed:', errorData);
     if (response.status === 404) {
       throw new Error(errorData.detail?.details || errorData.detail || `Selected bucket '${bucketName}' has no state files.`);
     }
@@ -170,22 +125,10 @@ const getStateFiles = async (sessionId: string, bucketName: string): Promise<Get
   }
 
   const result = await response.json();
-  console.log('✅ API: getStateFiles success:', { 
-    stateFileCount: result.state_files?.length || 0,
-    files: result.state_files?.map(f => f.key) || []
-  });
   return result;
 };
 
 const analyzeBucket = async (data: AnalyzeBucketRequest): Promise<AnalyzeBucketResponse> => {
-  console.log('🔍 API: analyzeBucket called with:', {
-    sessionId: data.session_id,
-    bucketName: data.bucket_name,
-    selectedResources: data.selected_resources,
-    resourceCount: data.selected_resources.length,
-    url: DriftAssistUrl.ANALYZE_BUCKET
-  });
-
   const response = await fetch(DriftAssistUrl.ANALYZE_BUCKET, {
     method: 'POST',
     headers: {
@@ -194,22 +137,12 @@ const analyzeBucket = async (data: AnalyzeBucketRequest): Promise<AnalyzeBucketR
     body: JSON.stringify(data),
   });
 
-  console.log('🔍 API: analyzeBucket response status:', response.status);
-
   if (!response.ok) {
     const errorData = await response.json();
-    console.error('❌ API: analyzeBucket failed:', errorData);
     throw new Error(errorData.details || errorData.error || 'Failed to analyze S3 state files');
   }
 
   const result = await response.json();
-  console.log('✅ API: analyzeBucket success:', {
-    status: result.status,
-    totalFiles: result.total_files,
-    successfulAnalyses: result.successful_analyses,
-    failedAnalyses: result.failed_analyses,
-    analysisResultsCount: result.analysis_results?.length || 0
-  });
   return result;
 };
 
@@ -222,20 +155,9 @@ export const useConnectToAWS = () => {
 };
 
 export const useGetS3Buckets = (sessionId: string, enabled: boolean = true) => {
-  console.log('🪣 useGetS3Buckets called:', { 
-    sessionId, 
-    enabled, 
-    hasSessionId: !!sessionId,
-    sessionIdType: typeof sessionId,
-    sessionIdValue: sessionId
-  });
-  
   return useQuery({
     queryKey: [QUERY_KEY.GET_S3_BUCKETS, sessionId],
-    queryFn: () => {
-      console.log('🪣 Executing getS3Buckets for session:', sessionId);
-      return getS3Buckets(sessionId);
-    },
+    queryFn: () => getS3Buckets(sessionId),
     enabled: enabled && !!sessionId && sessionId !== 'undefined' && sessionId !== 'null',
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -293,8 +215,6 @@ interface StoredAnalysisData {
 
 // API Functions for stored analyses
 const listStoredAnalyses = async (projectId: string, applicationId: string): Promise<AnalysisListResponse> => {
-  console.log('📋 API: listStoredAnalyses called with:', { projectId, applicationId });
-  
   const response = await fetch(`${DriftAssistUrl.LIST_STORED_ANALYSES}/${projectId}/${applicationId}`, {
     method: 'GET',
     headers: {
@@ -302,22 +222,16 @@ const listStoredAnalyses = async (projectId: string, applicationId: string): Pro
     },
   });
 
-  console.log('📋 API: listStoredAnalyses response status:', response.status);
-
   if (!response.ok) {
     const errorData = await response.json();
-    console.error('❌ API: listStoredAnalyses failed:', errorData);
     throw new Error(errorData.detail || errorData.error || 'Failed to fetch stored analyses');
   }
 
   const result = await response.json();
-  console.log('✅ API: listStoredAnalyses success:', { analysesCount: result.analyses?.length || 0 });
   return result;
 };
 
 const getStoredAnalysis = async (projectId: string, applicationId: string, analysisId: number): Promise<StoredAnalysisData> => {
-  console.log('📄 API: getStoredAnalysis called with:', { projectId, applicationId, analysisId });
-  
   const response = await fetch(`${DriftAssistUrl.GET_STORED_ANALYSIS}/${projectId}/${applicationId}/${analysisId}`, {
     method: 'GET',
     headers: {
@@ -325,35 +239,20 @@ const getStoredAnalysis = async (projectId: string, applicationId: string, analy
     },
   });
 
-  console.log('📄 API: getStoredAnalysis response status:', response.status);
-
   if (!response.ok) {
     const errorData = await response.json();
-    console.error('❌ API: getStoredAnalysis failed:', errorData);
     throw new Error(errorData.detail || errorData.error || 'Failed to fetch analysis details');
   }
 
   const result = await response.json();
-  console.log('✅ API: getStoredAnalysis success');
   return result;
 };
 
 // React Query Hooks for stored analyses
 export const useListStoredAnalyses = (projectId: string, applicationId: string, enabled: boolean = true) => {
-  console.log('📋 useListStoredAnalyses called:', { 
-    projectId, 
-    applicationId, 
-    enabled,
-    hasProjectId: !!projectId,
-    hasApplicationId: !!applicationId
-  });
-  
   return useQuery({
     queryKey: [QUERY_KEY.LIST_STORED_ANALYSES, projectId, applicationId],
-    queryFn: () => {
-      console.log('📋 Executing listStoredAnalyses for:', { projectId, applicationId });
-      return listStoredAnalyses(projectId, applicationId);
-    },
+    queryFn: () => listStoredAnalyses(projectId, applicationId),
     enabled: enabled && !!projectId && !!applicationId,
     staleTime: 30 * 1000, // 30 seconds
     retry: 2,
@@ -361,22 +260,9 @@ export const useListStoredAnalyses = (projectId: string, applicationId: string, 
 };
 
 export const useGetStoredAnalysis = (projectId: string, applicationId: string, analysisId: number, enabled: boolean = false) => {
-  console.log('📄 useGetStoredAnalysis called:', { 
-    projectId, 
-    applicationId, 
-    analysisId, 
-    enabled,
-    hasProjectId: !!projectId,
-    hasApplicationId: !!applicationId,
-    hasAnalysisId: !!analysisId
-  });
-  
   return useQuery({
     queryKey: [QUERY_KEY.GET_STORED_ANALYSIS, projectId, applicationId, analysisId],
-    queryFn: () => {
-      console.log('📄 Executing getStoredAnalysis for:', { projectId, applicationId, analysisId });
-      return getStoredAnalysis(projectId, applicationId, analysisId);
-    },
+    queryFn: () => getStoredAnalysis(projectId, applicationId, analysisId),
     enabled: enabled && !!projectId && !!applicationId && !!analysisId,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
@@ -437,18 +323,40 @@ export const useCreateDriftAssistSecret = () => {
 export const useListDriftAssistSecrets = (projectId: number, enabled: boolean = true) => {
   const { getSecretKeysByProjectId } = useIntegrationService();
   
-  console.log('📋 useListDriftAssistSecrets called:', { 
+  console.log('🔍 ACCOUNT SELECTION DEBUG: useListDriftAssistSecrets called:', { 
     projectId, 
     enabled,
-    hasProjectId: !!projectId
+    hasProjectId: !!projectId,
+    infrastructureId: 4
   });
   
   return useQuery({
     queryKey: [QUERY_KEY.LIST_DRIFT_ASSIST_SECRETS, projectId],
-    queryFn: () => {
-      console.log('📋 Executing listDriftAssistSecrets for project:', projectId);
-      // Infrastructure ID 4 is hardcoded for Drift Assist as mentioned in requirements
-      return getSecretKeysByProjectId(4, projectId.toString());
+    queryFn: async () => {
+      console.log('🔍 ACCOUNT SELECTION DEBUG: Executing getSecretKeysByProjectId with:', {
+        infrastructureId: 4,
+        projectId: projectId.toString(),
+        url: `/integration/list_secrets/4/${projectId}`
+      });
+      
+      try {
+        const result = await getSecretKeysByProjectId(4, projectId.toString());
+        console.log('🔍 ACCOUNT SELECTION DEBUG: getSecretKeysByProjectId result:', {
+          success: true,
+          resultType: typeof result,
+          isArray: Array.isArray(result),
+          length: Array.isArray(result) ? result.length : 'N/A',
+          result: result
+        });
+        return result;
+      } catch (error) {
+        console.error('🔍 ACCOUNT SELECTION DEBUG: getSecretKeysByProjectId failed:', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          errorType: error?.constructor?.name || 'Unknown',
+          stack: error instanceof Error ? error.stack : undefined
+        });
+        throw error;
+      }
     },
     enabled: enabled && !!projectId,
     staleTime: 30 * 1000, // 30 seconds
@@ -459,18 +367,9 @@ export const useListDriftAssistSecrets = (projectId: number, enabled: boolean = 
 export const useGetDriftAssistSecret = (integrationId: number, enabled: boolean = false) => {
   const { getDriftAssistSecret } = useIntegrationService();
   
-  console.log('🔑 useGetDriftAssistSecret called:', { 
-    integrationId, 
-    enabled,
-    hasIntegrationId: !!integrationId
-  });
-  
   return useQuery({
     queryKey: [QUERY_KEY.GET_DRIFT_ASSIST_SECRET, integrationId],
-    queryFn: () => {
-      console.log('🔑 Executing getDriftAssistSecret for integration:', integrationId);
-      return getDriftAssistSecret(integrationId.toString());
-    },
+    queryFn: () => getDriftAssistSecret(integrationId.toString()),
     enabled: enabled && !!integrationId,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
@@ -480,18 +379,9 @@ export const useGetDriftAssistSecret = (integrationId: number, enabled: boolean 
 export const useGetSecretValues = (integrationId: number, enabled: boolean = false) => {
   const { getSecretValues } = useIntegrationService();
   
-  console.log('🔓 useGetSecretValues called:', { 
-    integrationId, 
-    enabled,
-    hasIntegrationId: !!integrationId
-  });
-  
   return useQuery({
     queryKey: [QUERY_KEY.GET_SECRET_VALUES, integrationId],
-    queryFn: () => {
-      console.log('🔓 Executing getSecretValues for integration:', integrationId);
-      return getSecretValues(integrationId.toString());
-    },
+    queryFn: () => getSecretValues(integrationId.toString()),
     enabled: enabled && !!integrationId,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
