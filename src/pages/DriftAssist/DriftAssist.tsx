@@ -200,12 +200,12 @@ const DriftAssist: React.FC<DriftAssistProps> = ({
     checkBackendHealth();
   }, []);
 
-  // API hooks - Always call hooks unconditionally, handle conditions inside
-  const { data: s3BucketsData, isLoading: isLoadingBuckets, error: bucketsError } = useGetS3Buckets(currentSessionId || '', !!currentSessionId);
-  const { data: stateFilesData, isLoading: isLoadingStateFiles } = useGetStateFiles(currentSessionId || '', selectedBucket || '', !!currentSessionId && !!selectedBucket);
+  // API hooks
+  const { data: s3BucketsData, isLoading: isLoadingBuckets, error: bucketsError } = useGetS3Buckets(currentSessionId, !!currentSessionId);
+  const { data: stateFilesData, isLoading: isLoadingStateFiles } = useGetStateFiles(currentSessionId, selectedBucket || "", !!currentSessionId && !!selectedBucket);
   const analyzeBucketMutation = useAnalyzeBucket();
   
-  // Stored analyses hooks - Always call hooks unconditionally
+  // Stored analyses hooks
   const { data: storedAnalysesData, isLoading: isLoadingStoredAnalyses, error: storedAnalysesError } = useListStoredAnalyses(
     projectId || '', 
     applicationId || '', 

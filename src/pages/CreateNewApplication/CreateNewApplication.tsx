@@ -146,6 +146,7 @@ const CreateNewApplicationContent = () => {
             ),
             tags: [...basicDetailsPrimaryTag, ...basicDetailsSecondaryTag],
             project_id: Number(project),
+            privacy: basicDetailsForm.getFieldValue(PRIVACY.NAME),
           };
 
           const res = await createApplicationQuery.mutateAsync(req);
@@ -253,9 +254,8 @@ const CreateNewApplicationContent = () => {
               style={{ fontSize: 17, fontWeight: 600 }}
               onClick={() =>
                 navigate(
-                  resolveUrlParams(RouteUrl.APPLICATIONS.WORKFLOW, {
+                  resolveUrlParams(RouteUrl.PROJECTS.APPLICATIONS, {
                     project,
-                    application: applicationId,
                   }),
                 )
               }

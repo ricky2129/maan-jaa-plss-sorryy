@@ -4,6 +4,7 @@ import { EyeInvisibleOutlined, EyeTwoTone, PlusOutlined } from "@ant-design/icon
 import { Input, Text, DriftAssistSignInDrawer, IconViewer } from "components";
 import { Metrics, Colors } from "themes";
 import { useNavigate, useParams } from "react-router-dom";
+import { useCreateApplication } from "context";
 import { 
   useConnectToAWS,
   useListDriftAssistSecrets,
@@ -48,6 +49,10 @@ const ConfigureDriftAssist: React.FC<ConfigureDriftAssistProps> = ({
 }) => {
   const navigate = useNavigate();
   const { project, application } = useParams();
+  const { applicationId } = useCreateApplication();
+  
+  // Use applicationId from context if available (during creation), otherwise use URL param
+  const finalApplicationId = applicationId || application;
 
   // State for account selection
   const [isOpenAddDriftAssist, setIsOpenAddDriftAssist] = useState<boolean>(false);
@@ -116,7 +121,7 @@ const ConfigureDriftAssist: React.FC<ConfigureDriftAssistProps> = ({
         
         // Only navigate if skipNavigation is false (default behavior for workflow)
         if (!skipNavigation) {
-          navigate(`/project/${project}/application/${application}/workflow`, {
+          navigate(`/project/${project}/application/${finalApplicationId}/workflow`, {
             state: navigationState
           });
         }
@@ -158,7 +163,7 @@ const ConfigureDriftAssist: React.FC<ConfigureDriftAssistProps> = ({
         
         // Only navigate if skipNavigation is false (default behavior for workflow)
         if (!skipNavigation) {
-          navigate(`/project/${project}/application/${application}/workflow`, {
+          navigate(`/project/${project}/application/${finalApplicationId}/workflow`, {
             state: navigationState
           });
         }

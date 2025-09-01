@@ -36,43 +36,6 @@ import { ApplicationDiagnostics } from "pages/ApplicationDiagnostics";
 import { SloSliRouteWrapper } from "pages/SLO-SLI"; 
 import { ChaosExperiments } from "pages/ChaosExperiments"; 
 
-// ToolRenderer component to handle tool switching without conditional hooks
-interface ToolRendererProps {
-  activeTool: string;
-  driftAssistState: any;
-  onSetActiveTool: (tool: string) => void;
-}
-
-const ToolRenderer: React.FC<ToolRendererProps> = React.memo(({ activeTool, driftAssistState, onSetActiveTool }) => {
-  switch (activeTool) {
-    case "DriftAssist":
-      return (
-        <DriftAssist
-          onClose={() => onSetActiveTool("")}
-          onNavigateToWorkflow={() => onSetActiveTool("DriftAssist")}
-          initialSessionId={driftAssistState?.sessionId}
-          initialAwsCredentials={driftAssistState?.awsCredentials}
-        />
-      );
-    case "TraceAssist":
-      return <TraceAssist />;
-    case "ToilAssist":
-      return <ToilAssist />;
-    case "DashboardAssist":
-      return <DashboardAssist />;
-    case "SloSli":
-      return <SloSliRouteWrapper />;
-    case "Infrastructure":
-      return <ApplicationDiagnostics />;
-    case "Repositories":
-      return <ApplicationCodescan />;
-    case "Experiments":
-      return <ChaosExperiments />;
-    default:
-      return <Outlet />;
-  }
-});
-
 const serviceMap: Record<string, string> = {
   resiliency_index: "Infrastructure",
   code_hygiene_standards: "Repositories",
@@ -153,13 +116,14 @@ const ApplicationWorkflow: React.FC = () => {
   const navigate = useNavigate();
   const params = useParams();
  
-  const applicationData = useGetApplicationDetails(params?.application);
+  // Always call hooks consistently - pass undefined if no application ID
+  const applicationData = useGetApplicationDetails(params?.application || undefined);
   const addServiceToApplicationQuery = useAddServiceToApplication();
   const serviceList = useGetServiceList();
  
   const navmenu = useMemo(() => {
     return applicationData?.data?.services?.map((s) => s.service) || [];
-  }, [applicationData?.data?.services]);
+  }, [applicationData]);
  
   // Detect if navigation state includes DriftAssist session
   const driftAssistState = location.state?.sessionId ? location.state : null;
@@ -175,13 +139,7 @@ const ApplicationWorkflow: React.FC = () => {
   useEffect(() => {
     if (activeTool === "") {
       const service = location.pathname.split("/")?.pop()?.split("?")?.[0];
-      const mappedTool = serviceMap[service];
-      if (mappedTool) {
-        setActiveTool(mappedTool);
-      } else if (service === "drift-assist") {
-        // Handle direct drift-assist URL navigation
-        setActiveTool("DriftAssist");
-      }
+      setActiveTool(serviceMap[service] || "");
     }
   }, [location.pathname, activeTool, navmenu]);
  
@@ -222,9 +180,8 @@ const ApplicationWorkflow: React.FC = () => {
     async (toolName) => {
       setActiveTool(toolName);
  
-      // Check if tool requires service to be added
-      const currentServices = applicationData?.data?.services?.map((s) => s.service) || [];
-      if (!currentServices.includes(toolName)) {
+      // If tool requires service to be added
+      if (!navmenu.includes(toolName)) {
         if (toolName === "Experiments") {
           setIsOpenConfigureGremlin(true);
           return;
@@ -242,7 +199,7 @@ const ApplicationWorkflow: React.FC = () => {
         );
       }
     },
-    [getServiceId, navigate, params.project, params.application, applicationData?.data?.services],
+    [navmenu, getServiceId, navigate, params.project, params.application],
   );
  
   return (
@@ -328,12 +285,26 @@ const ApplicationWorkflow: React.FC = () => {
           />
         </Col>
         <Col sm={24} md={17} className="application-workflow-content">
-          {/* Use a single component renderer to avoid hooks order issues */}
-          <ToolRenderer 
-            activeTool={activeTool}
-            driftAssistState={driftAssistState}
-            onSetActiveTool={setActiveTool}
-          />
+          {/* Only the selected tool is rendered! */}
+          {activeTool === "DriftAssist" && (
+            <DriftAssist
+              onClose={() => setActiveTool("")}
+              onNavigateToWorkflow={() => setActiveTool("DriftAssist")}
+              initialSessionId={driftAssistState?.sessionId}
+              initialAwsCredentials={driftAssistState?.awsCredentials}
+            />
+          )}
+          {activeTool === "TraceAssist" && <TraceAssist />}
+          {activeTool === "ToilAssist" && <ToilAssist />}
+          {activeTool === "DashboardAssist" && <DashboardAssist />}
+          {activeTool === "SloSli" && <SloSliRouteWrapper />}
+          {activeTool === "Infrastructure" && <ApplicationDiagnostics />}
+          {activeTool === "Repositories" && <ApplicationCodescan />}
+          {activeTool === "Experiments" && <ChaosExperiments />}
+
+          {/* Add other tools as needed, following the same pattern */}
+          {/* Fallback: show Outlet if no tool is selected */}
+          {activeTool === "" && <Outlet />}
         </Col>
       </Row>
     </DriftAssistProvider>
