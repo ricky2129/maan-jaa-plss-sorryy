@@ -312,7 +312,6 @@ export interface CreateApplicationRequest {
   description: string;
   project_id: number;
   tags: Tag[];
-  privacy: string;
 }
 
 export interface AddMemberRequest {

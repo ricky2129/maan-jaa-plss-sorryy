@@ -146,7 +146,6 @@ const CreateNewApplicationContent = () => {
             ),
             tags: [...basicDetailsPrimaryTag, ...basicDetailsSecondaryTag],
             project_id: Number(project),
-            privacy: basicDetailsForm.getFieldValue(PRIVACY.NAME),
           };
 
           const res = await createApplicationQuery.mutateAsync(req);
