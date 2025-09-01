@@ -216,12 +216,15 @@ export const RouteUrl = {
       "/project/:project/application/:application/workflow/chaos-experiments/experiments",
     HEALTH_CHECKS:
       "/project/:project/application/:application/workflow/chaos-experiments/health-checks",
-
     AGENTS:
       "/project/:project/application/:application/workflow/chaos-experiments/agents",
     AGENT_INSTALATION_GUIDE:
       "/project/:project/application/:application/workflow/chaos-experiments/agent-installation-guide",
     DRIFT_ASSIST: "/project/:project/application/:application/workflow/drift-assist",
+    TRACE_ASSIST: "/project/:project/application/:application/workflow/trace-assist",
+    TOIL_ASSIST: "/project/:project/application/:application/workflow/toil-assist",
+    DASHBOARD_ASSIST: "/project/:project/application/:application/workflow/dashboard-assist",
+    SLO_SLI: "/project/:project/application/:application/workflow/slo-sli",
   },
 };
 

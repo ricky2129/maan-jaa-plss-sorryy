@@ -36,6 +36,43 @@ import { ApplicationDiagnostics } from "pages/ApplicationDiagnostics";
 import { SloSliRouteWrapper } from "pages/SLO-SLI"; 
 import { ChaosExperiments } from "pages/ChaosExperiments"; 
 
+// ToolRenderer component to handle tool switching without conditional hooks
+interface ToolRendererProps {
+  activeTool: string;
+  driftAssistState: any;
+  onSetActiveTool: (tool: string) => void;
+}
+
+const ToolRenderer: React.FC<ToolRendererProps> = React.memo(({ activeTool, driftAssistState, onSetActiveTool }) => {
+  switch (activeTool) {
+    case "DriftAssist":
+      return (
+        <DriftAssist
+          onClose={() => onSetActiveTool("")}
+          onNavigateToWorkflow={() => onSetActiveTool("DriftAssist")}
+          initialSessionId={driftAssistState?.sessionId}
+          initialAwsCredentials={driftAssistState?.awsCredentials}
+        />
+      );
+    case "TraceAssist":
+      return <TraceAssist />;
+    case "ToilAssist":
+      return <ToilAssist />;
+    case "DashboardAssist":
+      return <DashboardAssist />;
+    case "SloSli":
+      return <SloSliRouteWrapper />;
+    case "Infrastructure":
+      return <ApplicationDiagnostics />;
+    case "Repositories":
+      return <ApplicationCodescan />;
+    case "Experiments":
+      return <ChaosExperiments />;
+    default:
+      return <Outlet />;
+  }
+});
+
 const serviceMap: Record<string, string> = {
   resiliency_index: "Infrastructure",
   code_hygiene_standards: "Repositories",
@@ -290,48 +327,12 @@ const ApplicationWorkflow: React.FC = () => {
           />
         </Col>
         <Col sm={24} md={17} className="application-workflow-content">
-          {/* Always render all components but control visibility to maintain hooks order */}
-          <div style={{ display: activeTool === "DriftAssist" ? "block" : "none" }}>
-            <DriftAssist
-              onClose={() => setActiveTool("")}
-              onNavigateToWorkflow={() => setActiveTool("DriftAssist")}
-              initialSessionId={driftAssistState?.sessionId}
-              initialAwsCredentials={driftAssistState?.awsCredentials}
-            />
-          </div>
-          
-          <div style={{ display: activeTool === "TraceAssist" ? "block" : "none" }}>
-            <TraceAssist />
-          </div>
-          
-          <div style={{ display: activeTool === "ToilAssist" ? "block" : "none" }}>
-            <ToilAssist />
-          </div>
-          
-          <div style={{ display: activeTool === "DashboardAssist" ? "block" : "none" }}>
-            <DashboardAssist />
-          </div>
-          
-          <div style={{ display: activeTool === "SloSli" ? "block" : "none" }}>
-            <SloSliRouteWrapper />
-          </div>
-          
-          <div style={{ display: activeTool === "Infrastructure" ? "block" : "none" }}>
-            <ApplicationDiagnostics />
-          </div>
-          
-          <div style={{ display: activeTool === "Repositories" ? "block" : "none" }}>
-            <ApplicationCodescan />
-          </div>
-          
-          <div style={{ display: activeTool === "Experiments" ? "block" : "none" }}>
-            <ChaosExperiments />
-          </div>
-
-          {/* Fallback: show Outlet if no tool is selected */}
-          <div style={{ display: activeTool === "" ? "block" : "none" }}>
-            <Outlet />
-          </div>
+          {/* Use a single component renderer to avoid hooks order issues */}
+          <ToolRenderer 
+            activeTool={activeTool}
+            driftAssistState={driftAssistState}
+            onSetActiveTool={setActiveTool}
+          />
         </Col>
       </Row>
     </DriftAssistProvider>
