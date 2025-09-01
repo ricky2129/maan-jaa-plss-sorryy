@@ -290,26 +290,48 @@ const ApplicationWorkflow: React.FC = () => {
           />
         </Col>
         <Col sm={24} md={17} className="application-workflow-content">
-          {/* Only the selected tool is rendered! */}
-          {activeTool === "DriftAssist" && (
+          {/* Always render all components but control visibility to maintain hooks order */}
+          <div style={{ display: activeTool === "DriftAssist" ? "block" : "none" }}>
             <DriftAssist
               onClose={() => setActiveTool("")}
               onNavigateToWorkflow={() => setActiveTool("DriftAssist")}
               initialSessionId={driftAssistState?.sessionId}
               initialAwsCredentials={driftAssistState?.awsCredentials}
             />
-          )}
-          {activeTool === "TraceAssist" && <TraceAssist />}
-          {activeTool === "ToilAssist" && <ToilAssist />}
-          {activeTool === "DashboardAssist" && <DashboardAssist />}
-          {activeTool === "SloSli" && <SloSliRouteWrapper />}
-          {activeTool === "Infrastructure" && <ApplicationDiagnostics />}
-          {activeTool === "Repositories" && <ApplicationCodescan />}
-          {activeTool === "Experiments" && <ChaosExperiments />}
+          </div>
+          
+          <div style={{ display: activeTool === "TraceAssist" ? "block" : "none" }}>
+            <TraceAssist />
+          </div>
+          
+          <div style={{ display: activeTool === "ToilAssist" ? "block" : "none" }}>
+            <ToilAssist />
+          </div>
+          
+          <div style={{ display: activeTool === "DashboardAssist" ? "block" : "none" }}>
+            <DashboardAssist />
+          </div>
+          
+          <div style={{ display: activeTool === "SloSli" ? "block" : "none" }}>
+            <SloSliRouteWrapper />
+          </div>
+          
+          <div style={{ display: activeTool === "Infrastructure" ? "block" : "none" }}>
+            <ApplicationDiagnostics />
+          </div>
+          
+          <div style={{ display: activeTool === "Repositories" ? "block" : "none" }}>
+            <ApplicationCodescan />
+          </div>
+          
+          <div style={{ display: activeTool === "Experiments" ? "block" : "none" }}>
+            <ChaosExperiments />
+          </div>
 
-          {/* Add other tools as needed, following the same pattern */}
           {/* Fallback: show Outlet if no tool is selected */}
-          {activeTool === "" && <Outlet />}
+          <div style={{ display: activeTool === "" ? "block" : "none" }}>
+            <Outlet />
+          </div>
         </Col>
       </Row>
     </DriftAssistProvider>
