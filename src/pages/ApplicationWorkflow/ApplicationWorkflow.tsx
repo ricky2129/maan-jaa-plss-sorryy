@@ -138,7 +138,13 @@ const ApplicationWorkflow: React.FC = () => {
   useEffect(() => {
     if (activeTool === "") {
       const service = location.pathname.split("/")?.pop()?.split("?")?.[0];
-      setActiveTool(serviceMap[service] || "");
+      const mappedTool = serviceMap[service];
+      if (mappedTool) {
+        setActiveTool(mappedTool);
+      } else if (service === "drift-assist") {
+        // Handle direct drift-assist URL navigation
+        setActiveTool("DriftAssist");
+      }
     }
   }, [location.pathname, activeTool, navmenu]);
  
