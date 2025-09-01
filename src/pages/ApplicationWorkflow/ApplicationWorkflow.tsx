@@ -159,7 +159,7 @@ const ApplicationWorkflow: React.FC = () => {
  
   const navmenu = useMemo(() => {
     return applicationData?.data?.services?.map((s) => s.service) || [];
-  }, [applicationData]);
+  }, [applicationData?.data?.services]);
  
   // Detect if navigation state includes DriftAssist session
   const driftAssistState = location.state?.sessionId ? location.state : null;
@@ -222,8 +222,9 @@ const ApplicationWorkflow: React.FC = () => {
     async (toolName) => {
       setActiveTool(toolName);
  
-      // If tool requires service to be added
-      if (!navmenu.includes(toolName)) {
+      // Check if tool requires service to be added
+      const currentServices = applicationData?.data?.services?.map((s) => s.service) || [];
+      if (!currentServices.includes(toolName)) {
         if (toolName === "Experiments") {
           setIsOpenConfigureGremlin(true);
           return;
@@ -241,7 +242,7 @@ const ApplicationWorkflow: React.FC = () => {
         );
       }
     },
-    [navmenu, getServiceId, navigate, params.project, params.application],
+    [getServiceId, navigate, params.project, params.application, applicationData?.data?.services],
   );
  
   return (

@@ -15,7 +15,7 @@ interface ICreateApplicationContext {
   basicDetailsForm?: FormInstance<BasicDetailsApplicationFormField>;
   users: GrantAccessUserFormField[];
   sloTableData: SLOType[];
-  applicationId: number;
+  applicationId: number | null;
   setApplicationId: (id: number) => void;
   addSloTableData: (data: SLOType) => void;
   editSloTableData: (id: string, data: SLOType) => void;
@@ -42,7 +42,7 @@ const CreateApplicationContext =
   createContext<ICreateApplicationContext>(initialValue);
 
 const CreateApplicationProvider = ({ children }: ContextState) => {
-  const [applicationId, setApplicationId] = useState<number>(null);
+  const [applicationId, setApplicationId] = useState<number | null>(null);
   const [sloTableData, setSloTableData] = useState<SLOType[]>([]);
   const [basicDetailsForm] = Form.useForm<BasicDetailsApplicationFormField>();
 
