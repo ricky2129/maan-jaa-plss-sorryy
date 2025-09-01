@@ -253,8 +253,9 @@ const CreateNewApplicationContent = () => {
               style={{ fontSize: 17, fontWeight: 600 }}
               onClick={() =>
                 navigate(
-                  resolveUrlParams(RouteUrl.PROJECTS.APPLICATIONS, {
+                  resolveUrlParams(RouteUrl.APPLICATIONS.WORKFLOW, {
                     project,
+                    application: applicationId,
                   }),
                 )
               }
